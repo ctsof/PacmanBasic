@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man: 100 Levels of Difficulty</title>
+    <style>
+        body { background: #111; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        canvas { border: 4px solid #333; background: #000; }
+        .controls { margin: 15px; padding: 10px; background: #222; border-radius: 8px; text-align: center; }
+        .stats { font-size: 20px; margin-bottom: 10px; color: #ff0; }
+        input[type=range] { width: 200px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="stats">Score: <span id="score">0</span> | Level: <span id="levelVal">1</span></div>
+    
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <div class="controls">
+        <label>Difficulty Level (1 - 100): </label>
+        <input type="range" id="diffSlider" min="1" max="100" value="1">
+        <p><i>Speed and Ghost Aggression increase with Level.</i></p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('diffSlider');
+        const levelDisplay = document.getElementById('levelVal');
+        const scoreEl = document.getElementById('score');
+
+        let score = 0;
+        let difficulty = 1;
+        let pacman = { x: 200, y: 200, dir: null, speed: 2 };
+        let ghost = { x: 20, y: 20, speed: 1.5 };
+        let pellets = [];
+
+        // Dynamic speed based on difficulty level (1-100)
+        function updateDifficulty() {
+            difficulty = parseInt(slider.value);
+            levelDisplay.innerText = difficulty;
+            // Base speed 2 + (0.05 * level). Level 100 is ~3.5x faster than Level 1.
+            pacman.speed = 2 + (difficulty * 0.05); 
+            ghost.speed = 1.5 + (difficulty * 0.06); 
+        }
+
+        function initPellets() {
+            pellets = [];
+            for(let i=1; i<20; i++) {
+                for(let j=1; j<20; j++) pellets.push({ x: i*20, y: j*20 });
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Pellets
+            ctx.fillStyle = "white";
+            pellets.forEach(p => ctx.fillRect(p.x-2, p.y-2, 4, 4));
+
+            // Pac-Man
+            ctx.fillStyle = "yellow";
+            ctx.beginPath();
+            ctx.arc(pacman.x, pacman.y, 10, 0.2 * Math.PI, 1.8 * Math.PI);
+            ctx.lineTo(pacman.x, pacman.y);
+            ctx.fill();
+
+            // Ghost (Red)
+            ctx.fillStyle = "red";
+            ctx.fillRect(ghost.x - 10, ghost.y - 10, 20, 20);
+
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        function update() {
+            // Pacman Movement
+            if (pacman.dir === 'ArrowUp') pacman.y -= pacman.speed;
+            if (pacman.dir === 'ArrowDown') pacman.y += pacman.speed;
+            if (pacman.dir === 'ArrowLeft') pacman.x -= pacman.speed;
+            if (pacman.dir === 'ArrowRight') pacman.x += pacman.speed;
+
+            // Screen Wrap
+            if (pacman.x < 0) pacman.x = 400; if (pacman.x > 400) pacman.x = 0;
+            if (pacman.y < 0) pacman.y = 400; if (pacman.y > 400) pacman.y = 0;
+
+            // Simple Pursuit AI: Ghost moves toward Pacman
+            if (ghost.x < pacman.x) ghost.x += ghost.speed;
+            else ghost.x -= ghost.speed;
+            if (ghost.y < pacman.y) ghost.y += ghost.speed;
+            else ghost.y -= ghost.speed;
+
+            // Collision: Eat Pellets
+            pellets = pellets.filter(p => {
+                if (Math.hypot(pacman.x - p.x, pacman.y - p.y) < 10) {
+                    score += 10;
+                    scoreEl.innerText = score;
+                    return false;
+                }
+                return true;
+            });
+
+            // Collision: Ghost catches Pacman
+            if (Math.hypot(pacman.x - ghost.x, pacman.y - ghost.y) < 15) {
+                alert(`Game Over! Score: ${score} at Level ${difficulty}`);
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            score = 0; scoreEl.innerText = 0;
+            pacman = { x: 200, y: 200, dir: null, speed: 2 + (difficulty * 0.05) };
+            ghost = { x: 20, y: 20, speed: 1.5 + (difficulty * 0.06) };
+            initPellets();
+        }
+
+        slider.addEventListener('input', updateDifficulty);
+        window.addEventListener('keydown', e => { if (e.key.includes('Arrow')) pacman.dir = e.key; });
+
+        initPellets();
+        draw();
+    </script>
+</body>
+</html>
