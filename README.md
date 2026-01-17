@@ -1,2 +1,2 @@
 # PacmanBasic
-A Pacman game landed on Browser Engine
+A Pacman game landed on the Browser Engine
